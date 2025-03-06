@@ -5,6 +5,7 @@ import { Play, Volume2, VolumeX } from "lucide-react"
 
 interface FullScreenVideoProps {
   src: string
+  mobileSrc?: string
   type?: string
   showControls?: boolean
   overlay?: boolean
@@ -12,6 +13,7 @@ interface FullScreenVideoProps {
 
 export function FullScreenVideo({
   src,
+  mobileSrc,
   type = "video/mp4",
   showControls = true,
   overlay = false,
@@ -20,11 +22,16 @@ export function FullScreenVideo({
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
+  const [currentSrc, setCurrentSrc] = useState(src)
 
-  // Check if device is mobile
+  // Check if device is mobile and set appropriate source
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768)
+      const mobile = window.innerWidth <= 768
+      setIsMobile(mobile)
+      const newSrc = mobile && mobileSrc ? mobileSrc : src
+      setCurrentSrc(newSrc)
+      console.log(`Screen width: ${window.innerWidth}, isMobile: ${mobile}, currentSrc: ${newSrc}`)
     }
 
     // Initial check
@@ -36,7 +43,19 @@ export function FullScreenVideo({
     return () => {
       window.removeEventListener("resize", checkMobile)
     }
-  }, [])
+  }, [src, mobileSrc])
+
+  // Update video source when currentSrc changes
+  useEffect(() => {
+    const video = videoRef.current
+    if (video) {
+      video.src = currentSrc
+      video.load()
+      if (isPlaying) {
+        video.play()
+      }
+    }
+  }, [currentSrc, isPlaying])
 
   useEffect(() => {
     const video = videoRef.current
@@ -154,7 +173,7 @@ export function FullScreenVideo({
         loop
         controls={showControls && !isMobile} // Hide native controls on mobile
       >
-        <source src={src} type={type} />
+        <source src={currentSrc} type={type} />
         Your browser does not support the video tag.
       </video>
 
@@ -213,12 +232,6 @@ export function FullScreenVideo({
           </button>
         </div>
       )}
-
-      {/* Mobile orientation message */}
-      <div className="fixed inset-0 bg-black/90 text-white flex-col items-center justify-center text-center p-4 z-50 hidden landscape:flex md:landscape:hidden">
-        <p className="text-lg mb-2">For the best experience</p>
-        <p className="text-xl font-bold">Please rotate your device to portrait mode</p>
-      </div>
     </div>
   )
 }
